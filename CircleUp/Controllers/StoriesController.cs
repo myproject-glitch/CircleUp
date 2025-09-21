@@ -1,24 +1,32 @@
 ﻿using CircleUp.Data;
 using CircleUp.Data.Models;
+using CircleUp.Data.Services;
 using CircleUp.ViewModels.Stories;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using CircleUp.Data.Helpers.Enums;
 
 namespace CircleUp.Controllers
 {
     public class StoriesController : Controller
     {
-        private readonly AppDbContext _context;
+        private readonly IStoriesServices _storiesServices;
+        private readonly IFilesService _filesService;
 
-        public StoriesController(AppDbContext context)
+        public StoriesController(IStoriesServices storiesServices, IFilesService filesService)
         {
-            _context = context;
+            _storiesServices = storiesServices;
+            _filesService = filesService;
         }
         [HttpPost]
         public async Task<IActionResult> CreateStory(StoryVM storyVM)
         {
             //Get logges in user
             int loggedInUser = 1;
+
+            var imageUploadPath = await _filesService
+                .UploadImageAsync(storyVM.Image,ImageFileType.StoryImage);
+
 
             //Create a new post
 
@@ -27,32 +35,11 @@ namespace CircleUp.Controllers
                
                 DateCreated = DateTime.UtcNow,
                 IsDeleted = false,
+                ImageUrl = imageUploadPath,
                 UserId = loggedInUser
             };
 
-            if (storyVM.Image != null && storyVM.Image.Length > 0)
-            {
-                string rootFolderPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
-                if (storyVM.Image.ContentType.Contains("image"))
-                {
-                    string rootFolderPathImages = Path.Combine(rootFolderPath, "images/stories");
-                    Directory.CreateDirectory(rootFolderPathImages);
-
-                    string fileName = Guid.NewGuid().ToString() + Path.GetExtension(storyVM.Image.FileName);
-                    string filePath = Path.Combine(rootFolderPathImages, fileName);
-
-                    using (var stream = new FileStream(filePath, FileMode.Create))
-                        await storyVM.Image.CopyToAsync(stream);
-
-                    //Set the URL to the newPost object
-                    newStory.ImageUrl = "/images/stories/" + fileName;
-                }
-            }
-
-            await _context.Stories.AddAsync(newStory);
-            await _context.SaveChangesAsync();
-
-
+            await _storiesServices.CreateStoryAsync(newStory);
             return RedirectToAction("Index","Home");
 
         }

@@ -9,6 +9,7 @@
   <ItemGroup>
     <Folder Include="wwwroot\images\uploaded\" />
     <Folder Include="wwwroot\images\placeholders\" />
+	  
   </ItemGroup>
 
   <ItemGroup>
