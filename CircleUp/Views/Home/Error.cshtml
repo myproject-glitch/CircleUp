@@ -1,0 +1,24 @@
+﻿<div class="container text-center mt-5">
+    <h1 style="font-size:100px;">😵</h1>
+    <h1 class="text-danger">Oops! Something went wrong</h1>
+    <p class="lead">Our hamsters tripped on the wires 🐹⚡</p>
+
+    <p class="text-muted">
+        Don’t worry, we’re already on it.<br>
+        If the problem persists, contact us at
+        <a href="mailto:support@circleapp.com">support@circleapp.com</a>.
+    </p>
+
+    <p class="small text-secondary">
+        Status Code: <code>@ViewBag.StatusCode</code><br />
+        Request ID: <code>@ViewBag.RequestId</code>
+    </p>
+
+    <p class="small text-info">
+        Path: <strong>@ViewBag.RequestPath</strong><br />
+        Caused by IP: <strong>@ViewBag.ClientIp</strong><br />
+        Browser: <strong>@ViewBag.UserAgent</strong>
+    </p>
+
+    <a href="/" class="btn btn-primary mt-3">Go Back Home</a>
+</div>

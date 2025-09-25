@@ -5,6 +5,7 @@ using CircleUp.Data.Helpers.Enums;
 using CircleUp.Data.Models;
 using CircleUp.Data.Services;
 using CircleUp.ViewModels.Home;
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -17,8 +18,6 @@ namespace CircleUp.Controllers
         private readonly IPostsService _postsService;
         private readonly IHashtagsService _hashtagsService;
         private readonly IFilesService _filesService;
-
-
 
         public HomeController(ILogger<HomeController> logger,IPostsService postsService,
             IHashtagsService hashtagsService, IFilesService filesService)
@@ -34,6 +33,13 @@ namespace CircleUp.Controllers
 
             var allPosts = await _postsService.GetAllPostsAsync(loggedInUserId);
             return View(allPosts);
+        }
+
+
+        public async Task<IActionResult> Details(int postId)
+        {
+            var post = await _postsService.GetPostByIdAsync(postId);
+            return View(post);
         }
 
         [HttpPost]
@@ -160,6 +166,25 @@ namespace CircleUp.Controllers
 
             return RedirectToAction("Index");
         }
+
+        public IActionResult Error(int? code = null)
+        {
+            string requestId = HttpContext.TraceIdentifier;
+
+            string clientIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
+            string userAgent = HttpContext.Request.Headers["User-Agent"].ToString() ?? "Unknown Agent";
+            string requestPath = HttpContext.Request.Path.Value ?? "Unknown Path";
+
+            // Pass data to the view
+            ViewBag.RequestId = requestId;
+            ViewBag.RequestPath = requestPath;
+            ViewBag.ClientIp = clientIp;
+            ViewBag.UserAgent = userAgent;
+            ViewBag.StatusCode = code ?? 500;
+
+            return View();
+        }
+
 
     }
 }

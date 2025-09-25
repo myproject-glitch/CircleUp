@@ -1,5 +1,6 @@
 ﻿using CircleUp.Data.Models;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -31,6 +32,36 @@ namespace CircleUp.Data.Services
 
             return allPosts;
         }
+        [HttpPost]
+        public async Task<Post> GetPostByIdAsync(int postId)
+        {
+            var postDb = await _context.Posts
+              .Include(n => n.User)
+              .Include(n => n.Likes)
+              .Include(n => n.Favorites)
+              .Include(n => n.Comments).ThenInclude(n => n.User)
+              .FirstOrDefaultAsync(n => n.Id == postId);
+
+            return postDb;
+        }
+
+
+        public async Task<List<Post>> GetAllFavoritedPostsAsync(int loggedInUserId)
+        {
+            var allFavoritedPosts = await _context.Posts
+                .Where(p => p.Favorites.Any(f => f.UserId == loggedInUserId)
+                            && !p.IsDeleted
+                            && p.Reports.Count < 5)
+                .Include(p => p.Reports)
+                .Include(p => p.User)
+                .Include(p => p.Comments).ThenInclude(c => c.User)
+                .Include(p => p.Likes)
+                .OrderByDescending(p => p.DateCreated)
+                .ToListAsync();
+
+            return allFavoritedPosts;
+        }
+
         public async Task AddPostCommentAsync(Comment comment)
         {
             await _context.Comments.AddAsync(comment);
@@ -39,7 +70,7 @@ namespace CircleUp.Data.Services
 
         public async Task<Post> CreatePostsAsync(Post post)
         {
-          
+
 
             await _context.Posts.AddAsync(post);
             await _context.SaveChangesAsync();
@@ -52,8 +83,8 @@ namespace CircleUp.Data.Services
             var postDb = await _context.Posts.FirstOrDefaultAsync(n => n.Id == postId);
             if (postDb != null)
             {
-               // _context.Posts.Remove(postDb);
-               postDb.IsDeleted =  true;
+                // _context.Posts.Remove(postDb);
+                postDb.IsDeleted = true;
                 _context.Posts.Update(postDb);
                 await _context.SaveChangesAsync();
             }
@@ -85,7 +116,7 @@ namespace CircleUp.Data.Services
 
         public async Task TogglePostFavoriteAsync(int postId, int userId)
         {
-            
+
 
             //check if the user already favorite the post
 
@@ -102,7 +133,8 @@ namespace CircleUp.Data.Services
                 var newFavorite = new Favorite()
                 {
                     PostId = postId,
-                    UserId = userId
+                    UserId = userId,
+                    DateCreated = DateTime.UtcNow
                 };
                 await _context.Favorites.AddAsync(newFavorite);
                 await _context.SaveChangesAsync();
@@ -111,7 +143,7 @@ namespace CircleUp.Data.Services
 
         public async Task TogglePostLikeAsync(int postId, int userId)
         {
-           
+
 
             //check if the user already like the post
 

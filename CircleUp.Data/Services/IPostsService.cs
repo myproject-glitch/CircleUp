@@ -11,6 +11,9 @@ namespace CircleUp.Data.Services
     public interface IPostsService
     {
         Task<List<Post>> GetAllPostsAsync(int loggedInUserId);
+        Task <Post> GetPostByIdAsync(int loggedInUserId);
+
+        Task<List<Post>> GetAllFavoritedPostsAsync(int loggedInUserId);
         Task<Post> CreatePostsAsync(Post post);
         Task <Post> RemovePostAsync(int postId);
         Task AddPostCommentAsync(Comment comment);
