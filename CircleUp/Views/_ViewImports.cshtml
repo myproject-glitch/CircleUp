@@ -1,5 +1,11 @@
 ﻿@using CircleUp
-@using CircleUp.ViewModels.Home;
-@using CircleUp.ViewModels.Stories;
-@using CircleUp.Data.Models;
+@using CircleUp.ViewModels.Home
+@using CircleUp.ViewModels.Stories
+@using CircleUp.Data.Models
+@using CircleUp.Data.Helpers.Constants
+@using CircleUp.ViewModels.Authentication
+@using Microsoft.AspNetCore.Identity
+
 @addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+
+@inject UserManager<User> UserManager

@@ -1,6 +1,8 @@
-﻿@model Post
+﻿@using System.Security.Claims;
+@model Post
 
 @{
+    int loggedInUserId = int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out int result) ? result : 0;
     TimeSpan timeSpanSincePosted = DateTime.UtcNow.Subtract(Model.DateCreated);
 
 
@@ -13,10 +15,10 @@
         _ => "Just now"
     };
 
-    bool isFavorite = Model.Favorites.Any(n => n.UserId == 1);
-    bool isLiked = Model.Likes.Any(n => n.UserId == 1);
-    bool isPrivate = Model.IsPrivate == true && Model.UserId == 1;
-    bool isReported = Model.Reports.Any(n => n.UserId == 1);
+    bool isFavorite = Model.Favorites.Any(n => n.UserId == loggedInUserId);
+    bool isLiked = Model.Likes.Any(n => n.UserId == loggedInUserId);
+    bool isPrivate = Model.IsPrivate == true && Model.UserId == loggedInUserId;
+    bool isReported = Model.Reports.Any(n => n.UserId == loggedInUserId);
 
     bool showAllComments = ViewData["ShowAllComments"] as bool? ?? false;
 
@@ -47,7 +49,7 @@
                             uk-animation-scale-up uk-transform-origin-top-right;
                             animate-out: true; mode: click">
 
-                @if (Model.UserId == 1)
+                @if (Model.UserId == loggedInUserId)
                 {
                     <form asp-controller="Home" asp-action="TogglePostVisibilty">
                         <input type="hidden" name="postId" value="@Model.Id" />

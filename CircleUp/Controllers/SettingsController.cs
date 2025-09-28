@@ -1,47 +1,50 @@
-﻿using CircleUp.Data.Services;
+﻿using CircleUp.Data.Models;
+using CircleUp.Data.Services;
 using CircleUp.ViewModels.Settings;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace CircleUp.Controllers
 {
-    public class SettingsController : Controller
+    [Authorize]
+    public class SettingsController : Base.BaseController
     {
         private readonly IUsersService _usersService;
         private readonly IFilesService _filesService;
+        private readonly UserManager<User> _userManager;
 
-        public SettingsController(IUsersService usersService, IFilesService filesService) 
+        public SettingsController(IUsersService usersService, IFilesService filesService, UserManager<User> userManager) 
         {
             _usersService = usersService;
             _filesService = filesService;
+            _userManager = userManager;
         }
         public async  Task<IActionResult> Index()
         {
-            var loggedInUserId = 1;
-            var userDb = await _usersService.GetUser(loggedInUserId);
-            return View(userDb);
+
+            var loggedInuser = await _userManager.GetUserAsync(User);
+            return View(loggedInuser);
         }
 
         [HttpPost]
         public async Task<IActionResult> UpdateProfilePicture(UpdateProfilePictureVM profilePictureVM)
         {
-            int loggedInUser = 1;
+
+            var loggedInUserId = GetUserId();
+
+            if (loggedInUserId == null)
+                return RedirectToLogin();
+
             var uploadedProfilePictureUrl = await _filesService.UploadImageAsync
                 (profilePictureVM.ProfilePictureImage, Data.Helpers.Enums.ImageFileType.ProfilePicture);
-            await _usersService.UpdateUserProfilePicture(loggedInUser, uploadedProfilePictureUrl);
+            await _usersService.UpdateUserProfilePicture(loggedInUserId.Value, uploadedProfilePictureUrl);
             return RedirectToAction("Index");
 
         }
 
-        [HttpPost]
-        public async Task<IActionResult> UpdateProfile(UpdateProfileVM profileVM)
-        {
-            return RedirectToAction("Index");
-        }
+     
 
-        [HttpPost]
-        public async Task<IActionResult> UpdatePassword(UpdatePasswordVM passwordVM)
-        {
-            return RedirectToAction("Index");
-        }
     }
 }

@@ -5,10 +5,12 @@ using CircleUp.ViewModels.Stories;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using CircleUp.Data.Helpers.Enums;
+using Microsoft.AspNetCore.Authorization;
 
 namespace CircleUp.Controllers
 {
-    public class StoriesController : Controller
+    [Authorize]
+    public class StoriesController : Base.BaseController
     {
         private readonly IStoriesServices _storiesServices;
         private readonly IFilesService _filesService;
@@ -21,8 +23,11 @@ namespace CircleUp.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateStory(StoryVM storyVM)
         {
-            //Get logges in user
-            int loggedInUser = 1;
+
+            var loggedInUserId = GetUserId();
+
+            if (loggedInUserId == null)
+                return RedirectToLogin();
 
             var imageUploadPath = await _filesService
                 .UploadImageAsync(storyVM.Image,ImageFileType.StoryImage);
@@ -36,7 +41,7 @@ namespace CircleUp.Controllers
                 DateCreated = DateTime.UtcNow,
                 IsDeleted = false,
                 ImageUrl = imageUploadPath,
-                UserId = loggedInUser
+                UserId = loggedInUserId.Value
             };
 
             await _storiesServices.CreateStoryAsync(newStory);

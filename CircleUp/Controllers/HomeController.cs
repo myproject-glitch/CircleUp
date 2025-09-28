@@ -1,40 +1,47 @@
-using System.Diagnostics;
-using CircleUp.Data;
-using CircleUp.Data.Helpers;
+﻿
 using CircleUp.Data.Helpers.Enums;
 using CircleUp.Data.Models;
 using CircleUp.Data.Services;
 using CircleUp.ViewModels.Home;
-using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+using CircleUp.Controllers.Base;
 
 namespace CircleUp.Controllers
 {
-    public class HomeController : Controller
+    [Authorize] // 🔒 All actions require login unless specified otherwise
+    public class HomeController : BaseController
     {
         private readonly ILogger<HomeController> _logger;
-
         private readonly IPostsService _postsService;
         private readonly IHashtagsService _hashtagsService;
         private readonly IFilesService _filesService;
 
-        public HomeController(ILogger<HomeController> logger,IPostsService postsService,
-            IHashtagsService hashtagsService, IFilesService filesService)
+        public HomeController(
+            ILogger<HomeController> logger,
+            IPostsService postsService,
+            IHashtagsService hashtagsService,
+            IFilesService filesService)
         {
             _logger = logger;
             _postsService = postsService;
             _hashtagsService = hashtagsService;
             _filesService = filesService;
         }
-        public async Task<IActionResult> IndexAsync()
-        {
-            int loggedInUserId = 1;
 
-            var allPosts = await _postsService.GetAllPostsAsync(loggedInUserId);
+        // ✅ Helper to get logged in UserId
+
+
+        public async Task<IActionResult> Index()
+        {
+            var loggedInUserId = GetUserId();
+
+            if (loggedInUserId == null)
+                return RedirectToLogin();
+
+            var allPosts = await _postsService.GetAllPostsAsync(loggedInUserId.Value);
             return View(allPosts);
         }
-
 
         public async Task<IActionResult> Details(int postId)
         {
@@ -45,17 +52,18 @@ namespace CircleUp.Controllers
         [HttpPost]
         public async Task<IActionResult> CreatePost(PostVM? post)
         {
-            if (post == null || string.IsNullOrWhiteSpace(post.Content))
+            
+                var loggedInUserId = GetUserId();
+
+                if (loggedInUserId == null)
+                    return RedirectToLogin();
+
+                var allPosts = await _postsService.GetAllPostsAsync(loggedInUserId.Value);
+
+                if (post == null || string.IsNullOrWhiteSpace(post.Content))
                 return BadRequest("Post content is required.");
 
-
-            //Get logges in user
-            int loggedInUser = 1;
-
-            var imageUploadPath = await _filesService
-                .UploadImageAsync(post.Image, ImageFileType.PostImage);
-
-            //Create a new post
+            var imageUploadPath = await _filesService.UploadImageAsync(post.Image, ImageFileType.PostImage);
 
             var newPost = new Post
             {
@@ -64,16 +72,15 @@ namespace CircleUp.Controllers
                 DateUpdated = DateTime.UtcNow,
                 ImageUrl = imageUploadPath,
                 NrOfReports = 0,
-                UserId = loggedInUser
+                UserId = loggedInUserId.Value
             };
+
             await _postsService.CreatePostsAsync(newPost);
-            // Process hashtags only if content is not null/empty
+
             if (!string.IsNullOrWhiteSpace(post.Content))
             {
                 await _hashtagsService.ProcessHashtagsForNewPostAsync(post.Content);
             }
-
-            //Find and store hashtags to database
 
             return RedirectToAction("Index");
         }
@@ -81,73 +88,82 @@ namespace CircleUp.Controllers
         [HttpPost]
         public async Task<IActionResult> TogglePostLikes(PostLikeVM postLikeVM)
         {
-            int loggedInUserId = 1;
 
-            //check if the user already like the post
+            var loggedInUserId = GetUserId();
 
-            await _postsService.TogglePostLikeAsync(postLikeVM.PostId, loggedInUserId);
+            if (loggedInUserId == null)
+                return RedirectToLogin();
+
+            await _postsService.TogglePostLikeAsync(postLikeVM.PostId,loggedInUserId.Value);
             return RedirectToAction("Index");
         }
 
         [HttpPost]
         public async Task<IActionResult> AddPostComment(PostCommentVM postCommentVM)
         {
-            int loggedInUserId = 1;
 
-            //Create a post object
+            var loggedInUserId = GetUserId();
+
+            if (loggedInUserId == null)
+                return RedirectToLogin();
+
             var newComment = new Comment()
             {
-                UserId = loggedInUserId,
+                UserId = loggedInUserId.Value,
                 PostId = postCommentVM.PostId,
                 Content = postCommentVM.Content,
                 DateCreated = DateTime.UtcNow,
                 DatetUpdated = DateTime.UtcNow,
             };
+
             await _postsService.AddPostCommentAsync(newComment);
             return RedirectToAction("Index");
-
         }
-
 
         [HttpPost]
         public async Task<IActionResult> RemovePostComment(RemoveCommentVM removeCommentVM)
         {
-
             await _postsService.RemovePostCommentAsync(removeCommentVM.CommentId);
             return RedirectToAction("Index");
         }
 
-
         [HttpPost]
         public async Task<IActionResult> TogglePostFavorite(PostFavoriteVM postFavoriteVM)
         {
-            int loggedInUserId = 1;
 
-            //check if the user already favorite the post
+            var loggedInUserId = GetUserId();
 
-            await _postsService.TogglePostFavoriteAsync(postFavoriteVM.PostId, loggedInUserId);
+            if (loggedInUserId == null)
+                return RedirectToLogin();
+
+            await _postsService.TogglePostFavoriteAsync(postFavoriteVM.PostId,loggedInUserId.Value);
             return RedirectToAction("Index");
         }
 
         [HttpPost]
         public async Task<IActionResult> TogglePostVisibilty(PostVisibilityVM postVisibiltyVM)
         {
-            int loggedInUserId = 1;
 
-            //get post by id & loggedin user id
-            await _postsService.TogglePostVisibilityAsync(postVisibiltyVM.PostId, loggedInUserId);
+            var loggedInUserId = GetUserId();
+
+            if (loggedInUserId == null)
+                return RedirectToLogin();
+
+            await _postsService.TogglePostVisibilityAsync(postVisibiltyVM.PostId, loggedInUserId.Value);
             return RedirectToAction("Index");
         }
-
 
         [HttpPost]
         public async Task<IActionResult> AddPostReport(PostReportVM postReportVM)
         {
-            int loggedInUserId = 1;
 
-            await _postsService.ReportPostAsync(postReportVM.PostId, loggedInUserId);
+            var loggedInUserId = GetUserId();
+
+            if (loggedInUserId == null)
+                return RedirectToLogin();
+
+            await _postsService.ReportPostAsync(postReportVM.PostId, loggedInUserId.Value);
             return RedirectToAction("Index");
-
         }
 
         [HttpPost]
@@ -155,6 +171,7 @@ namespace CircleUp.Controllers
         {
             if (postRemoveVM == null)
                 return BadRequest("Invalid request.");
+
             var postRemoved = await _postsService.RemovePostAsync(postRemoveVM.PostId);
             if (postRemoved == null)
                 return NotFound("Post not found.");
@@ -171,20 +188,14 @@ namespace CircleUp.Controllers
         {
             string requestId = HttpContext.TraceIdentifier;
 
-            string clientIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
-            string userAgent = HttpContext.Request.Headers["User-Agent"].ToString() ?? "Unknown Agent";
-            string requestPath = HttpContext.Request.Path.Value ?? "Unknown Path";
-
-            // Pass data to the view
             ViewBag.RequestId = requestId;
-            ViewBag.RequestPath = requestPath;
-            ViewBag.ClientIp = clientIp;
-            ViewBag.UserAgent = userAgent;
+            ViewBag.RequestPath = HttpContext.Request.Path.Value ?? "Unknown Path";
+            ViewBag.ClientIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
+            ViewBag.UserAgent = HttpContext.Request.Headers["User-Agent"].ToString() ?? "Unknown Agent";
             ViewBag.StatusCode = code ?? 500;
 
             return View();
         }
-
 
     }
 }
